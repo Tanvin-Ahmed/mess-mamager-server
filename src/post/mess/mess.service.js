@@ -39,8 +39,9 @@ const getMessInfoById = async (id) => {
     .populate({
       path: "members",
       model: config.user_info_collection,
-      select: "email _id username managerOfTheMonths admin",
+      select: "email _id username managerOfTheMonths admin monthList",
     })
+    .select("-createdAt -updatedAt")
     .exec();
 };
 
@@ -55,8 +56,9 @@ const addMember = async (members, id) => {
     .populate({
       path: "members",
       model: config.user_info_collection,
-      select: "email _id username admin managerOfTheMonths",
+      select: "email _id username admin managerOfTheMonths monthList",
     })
+    .select("-createdAt -updatedAt")
     .exec();
   await postUser.updateMany(
     {
@@ -114,9 +116,41 @@ const removeMemberFromMess = async (userId, messId) => {
   }
 };
 
+const AddOthersCost = async ({ messId, cost, date }) => {
+  const _id = mongoose.Types.ObjectId(messId);
+
+  const key = Object.keys(cost)[0];
+
+  return await postMess
+    .findByIdAndUpdate(
+      _id,
+      {
+        ["monthList." + date + ".othersCost." + key]: cost[key],
+      },
+      { new: true }
+    )
+    .select("_id monthList");
+};
+
+const addMarketCost = async ({ messId, marketCost, date }) => {
+  const _id = mongoose.Types.ObjectId(messId);
+
+  return await postMess
+    .findByIdAndUpdate(
+      _id,
+      {
+        ["monthList." + date + ".totalMarketCost"]: marketCost,
+      },
+      { new: true }
+    )
+    .select("_id monthList");
+};
+
 module.exports = {
   createMess,
   getMessInfoById,
   addMember,
   removeMemberFromMess,
+  AddOthersCost,
+  addMarketCost,
 };

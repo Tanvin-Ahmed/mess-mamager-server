@@ -4,6 +4,8 @@ const {
   getMessInfoById,
   addMember,
   removeMemberFromMess,
+  AddOthersCost,
+  addMarketCost,
 } = require("./mess.service");
 
 const makeMess = async (req, res) => {
@@ -27,6 +29,7 @@ const getMessDetails = async (req, res) => {
   try {
     const id = req.params.id;
     const mess = await getMessInfoById(id);
+
     return res.status(200).json(mess);
   } catch (error) {
     console.log(error);
@@ -66,9 +69,32 @@ const removeMember = async (req, res) => {
 
     dataSendToClient("remove-member-from-mess", info, [...membersId]);
 
-    return res.status(200).json({ messages: "remove member successfully" });
+    return res.status(200).json({ message: "remove member successfully" });
   } catch (error) {
-    return res.status(500).json({ messages: "Member not removed!" });
+    return res.status(500).json({ message: "Member not removed!" });
+  }
+};
+
+const addCost = async (req, res) => {
+  try {
+    const { messId, cost, membersId, date } = req.body;
+
+    let updatedInfo;
+
+    if (Object.keys(cost)[0] === "market") {
+      const marketCost = cost.market;
+      updatedInfo = await addMarketCost({ messId, marketCost, date });
+    } else {
+      updatedInfo = await AddOthersCost({ messId, cost, date });
+    }
+
+    dataSendToClient("add-cost", updatedInfo, [...membersId]);
+
+    return res
+      .status(200)
+      .json({ message: `Add ${Object.keys(cost)[0]} cost successfully` });
+  } catch (error) {
+    return res.status(500).json({ message: "Error to add cost!" });
   }
 };
 
@@ -77,4 +103,5 @@ module.exports = {
   getMessDetails,
   addMemberInMess,
   removeMember,
+  addCost,
 };

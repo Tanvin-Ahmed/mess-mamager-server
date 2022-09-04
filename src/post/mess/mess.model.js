@@ -19,6 +19,10 @@ const messSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: config.user_info_collection,
     },
+    monthList: {
+      type: Object,
+      default: {},
+    },
   },
   {
     timestamps: true,

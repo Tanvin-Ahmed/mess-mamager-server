@@ -30,6 +30,10 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    monthList: {
+      type: Object,
+      default: {},
+    },
   },
   {
     versionKey: false,

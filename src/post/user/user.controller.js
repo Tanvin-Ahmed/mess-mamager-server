@@ -12,6 +12,9 @@ const {
   searchUser,
   updateUserById,
   updateAdminData,
+  AddMeal,
+  updateMeal,
+  AddDeposit,
 } = require("./user.service");
 
 const register = async (req, res) => {
@@ -108,8 +111,8 @@ const searchPeople = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { month, memberId, membersId } = req.body;
-    const updatedUser = await updateUserById(memberId, month);
+    const { date, memberId, membersId } = req.body;
+    const updatedUser = await updateUserById(memberId, date);
     dataSendToClient("update-mamager-info-of-user", updatedUser, [
       ...membersId,
     ]);
@@ -139,6 +142,75 @@ const makeAdmin = async (req, res) => {
   }
 };
 
+const addMeals = async (req, res) => {
+  const { username } = req.body;
+  try {
+    const { id, messId, meals, date, membersId, totalMeal } = req.body;
+    console.log(totalMeal);
+    const updatedData = await AddMeal({
+      id,
+      messId,
+      meals,
+      date,
+      totalMeal,
+    });
+
+    dataSendToClient("add-meals", updatedData, [...membersId]);
+
+    return res.status(201).json({
+      message: `Added ${username}'s meals successfully!`,
+      success: true,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .send({ message: `${username}'s meal not added!`, error: true });
+  }
+};
+
+const updateUserMeals = async (req, res) => {
+  const { username } = req.body;
+  try {
+    const { id, messId, meals, date, membersId, totalMeal } = req.body;
+    const updatedData = await updateMeal({
+      id,
+      messId,
+      meals,
+      date,
+      totalMeal,
+    });
+
+    dataSendToClient("update-meals", updatedData, [...membersId]);
+
+    return res.status(201).json({
+      message: `Updated ${username}'s meals successfully!`,
+      success: true,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .send({ message: `${username}'s meal not updated!`, error: true });
+  }
+};
+
+const addDeposit = async (req, res) => {
+  try {
+    const { userId, amount, date, membersId } = req.body;
+
+    const updatedInfo = await AddDeposit({ userId, amount, date });
+
+    dataSendToClient("add-deposit", updatedInfo, [...membersId]);
+
+    return res
+      .status(200)
+      .json({ message: "Deposit added successfully!", success: true });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Error adding deposit!", error: true });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -146,4 +218,7 @@ module.exports = {
   searchPeople,
   updateUser,
   makeAdmin,
+  addMeals,
+  updateUserMeals,
+  addDeposit,
 };
