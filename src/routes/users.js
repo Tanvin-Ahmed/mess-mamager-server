@@ -11,6 +11,8 @@ const {
   addMeals,
   updateUserMeals,
   addDeposit,
+  deleteUserAccount,
+  updatePaymentStatus,
 } = require("../post/user/user.controller");
 var router = express.Router();
 
@@ -24,5 +26,7 @@ router.put("/make-admin", tokenVerification, makeAdmin);
 router.put("/add-meal", tokenVerification, addMeals);
 router.put("/update-meal", tokenVerification, updateUserMeals);
 router.put("/add-deposit", tokenVerification, addDeposit);
+router.put("/delete-user-account", tokenVerification, deleteUserAccount);
+router.put("/update-payment-status", tokenVerification, updatePaymentStatus);
 
 module.exports = router;

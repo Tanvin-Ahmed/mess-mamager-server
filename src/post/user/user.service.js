@@ -2,6 +2,9 @@ const { postUser } = require("./user.model");
 const mongoose = require("mongoose");
 const { postMess } = require("../mess/mess.model");
 const { config } = require("../../config/config");
+const {
+  checkIfMonthListLengthGraterThanThree,
+} = require("../mess/mess.service");
 
 const checkEmailDuplication = async (email) => {
   return await postUser.exists({ email });
@@ -21,11 +24,14 @@ const userLogin = async (email) => {
 
 const getUserInfoById = async (id) => {
   const _id = mongoose.Types.ObjectId(id);
-  return await postUser.findById(_id).populate({
-    path: "memberOfMess",
-    model: config.mess_info_collection,
-    select: "_id messName",
-  });
+  return await postUser
+    .findById(_id)
+    .populate({
+      path: "memberOfMess",
+      model: config.mess_info_collection,
+      select: "_id messName",
+    })
+    .select("-password");
 };
 
 const searchUser = async (name) => {
@@ -34,16 +40,37 @@ const searchUser = async (name) => {
       username: new RegExp(name, "i"),
     })
     .limit(10)
-    .select("_id username email");
+    .select("_id username email memberOfMess");
 };
 
-const updateUserById = async (id, date) => {
+const updateUserManagerDate = async (id, date) => {
   const _id = mongoose.Types.ObjectId(id);
   const info = await postUser.findById(_id).select("_id managerOfTheMonths");
 
   if (info.managerOfTheMonths.length === 2) {
     await postUser.findByIdAndUpdate(_id, {
       $pop: { managerOfTheMonths: -1 },
+    });
+  }
+
+  return await postUser
+    .findByIdAndUpdate(
+      _id,
+      {
+        $addToSet: { managerOfTheMonths: date },
+      },
+      { new: true }
+    )
+    .select("_id managerOfTheMonths");
+};
+
+const updateManagerDateWhenAccountDelete = async (id, date) => {
+  const _id = mongoose.Types.ObjectId(id);
+  const info = await postUser.findById(_id).select("_id managerOfTheMonths");
+
+  if (info.managerOfTheMonths.length) {
+    await postUser.findByIdAndUpdate(_id, {
+      $pop: { managerOfTheMonths: 1 },
     });
   }
 
@@ -95,11 +122,13 @@ const AddMeal = async ({ id, meals, date, messId, totalMeal }) => {
     await session.commitTransaction();
     await session.endSession();
 
+    await checkIfMonthListLengthGraterThanThree(_messId);
+
     return { updatedUser, updatedMess };
   } catch (error) {
     await session.commitTransaction();
     await session.endSession();
-    return null;
+    return new Error(error);
   }
 };
 
@@ -110,22 +139,19 @@ const updateMeal = async ({ id, meals, date, messId, totalMeal }) => {
     const _id = mongoose.Types.ObjectId(id);
     const _messId = mongoose.Types.ObjectId(messId);
 
-    const updatedUserInfo = await postUser
-      .updateOne(
-        { _id: _id, ["monthList." + date + ".mealList.date"]: meals.date },
-        {
-          $set: {
-            ["monthList." + date + ".mealList.$.breakfast"]: meals.breakfast,
-            ["monthList." + date + ".mealList.$.lunch"]: meals.lunch,
-            ["monthList." + date + ".mealList.$.dinner"]: meals.dinner,
-          },
+    await postUser.updateOne(
+      { _id: _id, ["monthList." + date + ".mealList.date"]: meals.date },
+      {
+        $set: {
+          ["monthList." + date + ".mealList.$.breakfast"]: meals.breakfast,
+          ["monthList." + date + ".mealList.$.lunch"]: meals.lunch,
+          ["monthList." + date + ".mealList.$.dinner"]: meals.dinner,
         },
-        {
-          session: session,
-          new: true,
-        }
-      )
-      .select("_id monthList");
+      },
+      {
+        session: session,
+      }
+    );
 
     const updatedMess = await postMess
       .findByIdAndUpdate(
@@ -145,11 +171,16 @@ const updateMeal = async ({ id, meals, date, messId, totalMeal }) => {
 
     await session.commitTransaction();
     await session.endSession();
+
+    const updatedUserInfo = await postUser
+      .findById(_id)
+      .select("_id monthList");
+
     return { updatedUserInfo, updatedMess };
   } catch (error) {
     await session.commitTransaction();
     await session.endSession();
-    return null;
+    return new Error(error);
   }
 };
 
@@ -192,14 +223,35 @@ const AddDeposit = async ({ userId, amount, date }) => {
     await session.commitTransaction();
     await session.endSession();
 
+    await checkIfMonthListLengthGraterThanThree(messId);
+
     delete updatedUser.memberOfMess;
 
     return { updatedUser, updatedMess };
   } catch (error) {
     await session.commitTransaction();
     await session.endSession();
-    return null;
+    return new Error(error);
   }
+};
+
+const deleteAccount = async (userId) => {
+  const _id = mongoose.Types.ObjectId(userId);
+
+  return await postUser.findByIdAndDelete(_id);
+};
+
+const updateUserPaymentStatus = async (userId, paymentStatus, date) => {
+  const _id = mongoose.Types.ObjectId(userId);
+  return await postUser
+    .findByIdAndUpdate(
+      _id,
+      {
+        ["monthList." + date + ".paymentStatus"]: paymentStatus,
+      },
+      { new: true }
+    )
+    .select("_id monthList");
 };
 
 module.exports = {
@@ -208,9 +260,12 @@ module.exports = {
   getUserInfoById,
   checkEmailDuplication,
   searchUser,
-  updateUserById,
+  updateUserManagerDate,
   updateAdminData,
   AddMeal,
   updateMeal,
   AddDeposit,
+  updateManagerDateWhenAccountDelete,
+  deleteAccount,
+  updateUserPaymentStatus,
 };

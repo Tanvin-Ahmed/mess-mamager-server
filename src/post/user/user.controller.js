@@ -3,19 +3,32 @@ const {
   criptoPasswordGenerator,
 } = require("../../auth/criptoPasswordGenerator");
 const { tokenGenerator } = require("../../auth/tokenGenerator");
+const { pushNotification } = require("../../pushNotification/pushNotification");
 const { dataSendToClient } = require("../../socket/handlers/dataSendToClient");
+const { getMonthWithYear } = require("../../utils/monthsName");
+const {
+  removeMemberFromMessWhenAccountDelete,
+} = require("../mess/mess.service");
+const {
+  subscriptionsByUserIds,
+} = require("../subscription/subscription.service");
 const {
   registerUser,
   userLogin,
   getUserInfoById,
   checkEmailDuplication,
   searchUser,
-  updateUserById,
+  updateUserManagerDate,
   updateAdminData,
   AddMeal,
   updateMeal,
   AddDeposit,
+  updateManagerDateWhenAccountDelete,
+  deleteAccount,
+  updateUserPaymentStatus,
 } = require("./user.service");
+
+const clientRootUlr = "http://localhost:3000";
 
 const register = async (req, res) => {
   try {
@@ -74,7 +87,6 @@ const login = async (req, res) => {
     const token = tokenGenerator(tokenData);
     return res.status(200).json({ token, info });
   } catch (error) {
-    console.log(error);
     return res
       .status(500)
       .json({ error: true, message: "Authentication failed!" });
@@ -85,9 +97,7 @@ const getUserInfo = async (req, res) => {
   try {
     const id = req.params.id;
     const user = await getUserInfoById(id);
-    const info = JSON.parse(JSON.stringify(user));
-    delete info.password;
-    return res.status(200).json(info);
+    return res.status(200).json(user);
   } catch (error) {
     console.log(error);
     return res
@@ -112,7 +122,7 @@ const searchPeople = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { date, memberId, membersId } = req.body;
-    const updatedUser = await updateUserById(memberId, date);
+    const updatedUser = await updateUserManagerDate(memberId, date);
     dataSendToClient("update-mamager-info-of-user", updatedUser, [
       ...membersId,
     ]);
@@ -130,7 +140,26 @@ const makeAdmin = async (req, res) => {
   try {
     const { id, admin, membersId } = req.body;
     const updatedUser = await updateAdminData(id, admin);
+
     dataSendToClient("make-admin", updatedUser, [...membersId]);
+
+    const memebersSubscriptionData = await subscriptionsByUserIds([
+      ...membersId,
+    ]);
+
+    if (memebersSubscriptionData.length) {
+      memebersSubscriptionData.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `Congratulations! You are new admin of ${userId.memberOfMess.messName} mess😍`,
+          data: {
+            url: clientRootUlr + "/admin-dashboard",
+          },
+        });
+      });
+    }
+
+    await pushNotification();
+
     return res.status(200).json({
       updatedUser,
       message: updatedUser.admin
@@ -146,7 +175,7 @@ const addMeals = async (req, res) => {
   const { username } = req.body;
   try {
     const { id, messId, meals, date, membersId, totalMeal } = req.body;
-    console.log(totalMeal);
+
     const updatedData = await AddMeal({
       id,
       messId,
@@ -156,6 +185,19 @@ const addMeals = async (req, res) => {
     });
 
     dataSendToClient("add-meals", updatedData, [...membersId]);
+
+    const userSubscription = await subscriptionsByUserIds([id]);
+
+    if (userSubscription.length) {
+      userSubscription.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `${userId.username}📢📢!!! manager add your meals`,
+          data: {
+            url: clientRootUlr + "/profile",
+          },
+        });
+      });
+    }
 
     return res.status(201).json({
       message: `Added ${username}'s meals successfully!`,
@@ -182,6 +224,19 @@ const updateUserMeals = async (req, res) => {
 
     dataSendToClient("update-meals", updatedData, [...membersId]);
 
+    const userSubscription = await subscriptionsByUserIds([id]);
+
+    if (userSubscription.length) {
+      userSubscription.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `${userId.username}📢! Your meal update by manager!`,
+          data: {
+            url: clientRootUlr + "/profile",
+          },
+        });
+      });
+    }
+
     return res.status(201).json({
       message: `Updated ${username}'s meals successfully!`,
       success: true,
@@ -199,7 +254,20 @@ const addDeposit = async (req, res) => {
 
     const updatedInfo = await AddDeposit({ userId, amount, date });
 
+    const userSubscription = await subscriptionsByUserIds([userId]);
+
     dataSendToClient("add-deposit", updatedInfo, [...membersId]);
+
+    if (userSubscription.length) {
+      userSubscription.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `📢 ${userId.username} your total deposit amount is ${amount}.`,
+          data: {
+            url: clientRootUlr + "/profile",
+          },
+        });
+      });
+    }
 
     return res
       .status(200)
@@ -208,6 +276,97 @@ const addDeposit = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Error adding deposit!", error: true });
+  }
+};
+
+const updateAllMembersManagerDate = async (dates, index) => {
+  try {
+    if (dates.length === index) {
+      return "update all members manager date!";
+    }
+    await updateManagerDateWhenAccountDelete(
+      dates[index]._id,
+      dates[index].nextManagerDate
+    );
+    return await updateAllMembersManagerDate(dates, ++index);
+  } catch (error) {
+    return error;
+  }
+};
+
+const deleteUserAccount = async (req, res) => {
+  try {
+    const { userId, membersId, updatedManagerOfTheMonth, messId } = req.body;
+
+    await deleteAccount(userId);
+
+    await removeMemberFromMessWhenAccountDelete(userId, messId);
+
+    await updateAllMembersManagerDate(updatedManagerOfTheMonth, 0);
+
+    dataSendToClient(
+      "delete-user-account",
+      { updatedManagerOfTheMonth, userId, messId },
+      [...membersId]
+    );
+
+    return res.status(200).json({
+      message: "Wish you come back to me very soon..😔!!",
+      status: "success",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong, please try again!",
+      error: true,
+    });
+  }
+};
+
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { userId, paymentStatus, membersId, date } = req.body;
+
+    const updatedUserInfo = await updateUserPaymentStatus(
+      userId,
+      paymentStatus,
+      date
+    );
+
+    dataSendToClient("update-user-payment-status", updatedUserInfo, [
+      ...membersId,
+    ]);
+
+    const usersSubscription = await subscriptionsByUserIds([userId]);
+
+    if (usersSubscription.length) {
+      usersSubscription.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: paymentStatus
+            ? `📢📢 ${
+                userId.username
+              }, you completed the transaction of month ${getMonthWithYear(
+                date
+              )}!`
+            : `📢📢 ${
+                userId.username
+              }, you not complete the transaction of month ${getMonthWithYear(
+                date
+              )}! Please do that as soon as possible!`,
+
+          data: {
+            url: clientRootUlr + "/profile",
+          },
+        });
+      });
+    }
+
+    return res.status(200).json({ status: "success" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Payment status not updated, please try again!",
+      error: true,
+    });
   }
 };
 
@@ -221,4 +380,6 @@ module.exports = {
   addMeals,
   updateUserMeals,
   addDeposit,
+  deleteUserAccount,
+  updatePaymentStatus,
 };

@@ -3,6 +3,24 @@ const { postUser } = require("../user/user.model");
 const mongoose = require("mongoose");
 const { config } = require("../../config/config");
 
+const checkIfMonthListLengthGraterThanThree = async (id) => {
+  try {
+    const _id = mongoose.Types.ObjectId(id);
+    const messInfo = await postMess.findById(_id).select("monthList");
+
+    const monthList = Object.keys(messInfo.monthList);
+
+    if (monthList.length > 3) {
+      return await postMess.findByIdAndUpdate(_id, {
+        $unset: { ["monthList." + monthList[0]]: 1 },
+      });
+    }
+    return "all is ok";
+  } catch (error) {
+    return new Error(error.message);
+  }
+};
+
 const createMess = async ({ data, creatorId }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -28,7 +46,7 @@ const createMess = async ({ data, creatorId }) => {
   } catch (error) {
     await session.commitTransaction();
     await session.endSession();
-    return null;
+    return new Error(error);
   }
 };
 
@@ -45,31 +63,43 @@ const getMessInfoById = async (id) => {
     .exec();
 };
 
-const addMember = async (members, id) => {
-  const _id = mongoose.Types.ObjectId(id);
-  const oldMembers = await postMess.findById(_id).select("members");
-  const old = JSON.parse(JSON.stringify(oldMembers));
-  // remove duplicates
-  const newMembers = [...new Set([...old.members, ...members])];
-  const updatedMess = await postMess
-    .findByIdAndUpdate(_id, { members: newMembers }, { new: true })
-    .populate({
-      path: "members",
-      model: config.user_info_collection,
-      select: "email _id username admin managerOfTheMonths monthList",
-    })
-    .select("-createdAt -updatedAt")
-    .exec();
-  await postUser.updateMany(
-    {
-      _id: [...members],
-    },
-    { memberOfMess: _id }
-  );
+const addMember = async (newMembers, oldMembers, id) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const newMessInfo = JSON.parse(JSON.stringify(updatedMess));
+  try {
+    const _id = mongoose.Types.ObjectId(id);
+    const updatedMess = await postMess
+      .findByIdAndUpdate(
+        _id,
+        { members: [...newMembers, ...oldMembers] },
+        { session: session, new: true }
+      )
+      .populate({
+        path: "members",
+        model: config.user_info_collection,
+        select: "email _id username admin managerOfTheMonths monthList",
+      })
+      .select("_id messName members")
+      .exec();
 
-  return { newMessInfo, oldMembers: [...old.members] };
+    await postUser.updateMany(
+      {
+        _id: [...newMembers],
+      },
+      { memberOfMess: _id },
+      { session: session }
+    );
+
+    await session.commitTransaction();
+    await session.endSession();
+
+    return updatedMess;
+  } catch (error) {
+    await session.commitTransaction();
+    await session.endSession();
+    return new Error(error);
+  }
 };
 
 const removeMemberFromMess = async (userId, messId) => {
@@ -87,32 +117,28 @@ const removeMemberFromMess = async (userId, messId) => {
       { session: session }
     );
 
-    await postUser.findByIdAndUpdate(
+    const updatedUser = await postUser.findByIdAndUpdate(
       _userId,
       {
-        memberOfMess: mongoose.Types.ObjectId(),
+        $unset: { memberOfMess: 1 },
         managerOfTheMonths: [],
         admin: false,
+        monthList: {},
       },
-      { session: session }
+      { session: session, new: true }
     );
 
     await session.commitTransaction();
     await session.endSession();
 
     return {
-      updatedUser: {
-        _id: userId,
-        memberOfMess: "",
-        managerOfTheMonths: [],
-        admin: false,
-      },
+      updatedUser,
       messId,
     };
   } catch (error) {
     await session.commitTransaction();
     await session.endSession();
-    return null;
+    return new Error(error);
   }
 };
 
@@ -121,7 +147,7 @@ const AddOthersCost = async ({ messId, cost, date }) => {
 
   const key = Object.keys(cost)[0];
 
-  return await postMess
+  const updatedMessInfo = await postMess
     .findByIdAndUpdate(
       _id,
       {
@@ -130,12 +156,16 @@ const AddOthersCost = async ({ messId, cost, date }) => {
       { new: true }
     )
     .select("_id monthList");
+
+  await checkIfMonthListLengthGraterThanThree(_id);
+
+  return updatedMessInfo;
 };
 
 const addMarketCost = async ({ messId, marketCost, date }) => {
   const _id = mongoose.Types.ObjectId(messId);
 
-  return await postMess
+  const updatedMessInfo = await postMess
     .findByIdAndUpdate(
       _id,
       {
@@ -144,6 +174,19 @@ const addMarketCost = async ({ messId, marketCost, date }) => {
       { new: true }
     )
     .select("_id monthList");
+
+  await checkIfMonthListLengthGraterThanThree(_id);
+
+  return updatedMessInfo;
+};
+
+const removeMemberFromMessWhenAccountDelete = async (userId, messId) => {
+  const _userId = mongoose.Types.ObjectId(userId);
+  const _messId = mongoose.Types.ObjectId(messId);
+
+  return await postMess.findByIdAndUpdate(_messId, {
+    $pull: { members: _userId },
+  });
 };
 
 module.exports = {
@@ -153,4 +196,6 @@ module.exports = {
   removeMemberFromMess,
   AddOthersCost,
   addMarketCost,
+  removeMemberFromMessWhenAccountDelete,
+  checkIfMonthListLengthGraterThanThree,
 };

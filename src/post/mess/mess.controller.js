@@ -8,6 +8,13 @@ const {
   addMarketCost,
 } = require("./mess.service");
 
+const {
+  subscriptionsByUserIds,
+} = require("../subscription/subscription.service");
+const { pushNotification } = require("../../pushNotification/pushNotification");
+
+const clientRootUlr = "http://localhost:3000";
+
 const makeMess = async (req, res) => {
   try {
     const data = req.body;
@@ -41,18 +48,38 @@ const getMessDetails = async (req, res) => {
 
 const addMemberInMess = async (req, res) => {
   try {
-    const { messId, newMembers } = req.body;
-    const { newMessInfo, oldMembers } = await addMember(newMembers, messId);
+    const { messId, newMembers, oldMembers } = req.body;
+    const updatedMess = await addMember(newMembers, oldMembers, messId);
 
     // send to every active memebers
-    dataSendToClient("add-new-members", newMessInfo.members, oldMembers);
-    dataSendToClient(
-      "add-new-members",
-      { memberOfMess: newMessInfo._id },
-      newMembers
-    );
+    dataSendToClient("add-new-members", updatedMess, [
+      ...newMembers,
+      ...oldMembers,
+    ]);
 
-    return res.status(200).json(newMessInfo.members);
+    const newMembersSubscriptionData = await subscriptionsByUserIds(newMembers);
+    const oldMembersSubscriptionData = await subscriptionsByUserIds(oldMembers);
+
+    if (newMembersSubscriptionData.length) {
+      newMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `Welcome to "${userId.memberOfMess.messName}" mess!`,
+          data: {
+            url: clientRootUlr + "/",
+          },
+        });
+      });
+    }
+
+    if (oldMembersSubscriptionData.length) {
+      oldMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
+        await pushNotification(subscription, {
+          body: `Added new members in mess!`,
+        });
+      });
+    }
+
+    return res.status(200).json("add members successfully!");
   } catch (error) {
     console.log(error);
     return res
