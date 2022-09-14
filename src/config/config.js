@@ -7,4 +7,9 @@ module.exports.config = {
   vAPIDPrivateKey: process.env.vAPIDPrivateKey,
   subscription_collection: process.env.SUBSCRIPTION_COLLECTION,
   crypto_secret_key: process.env.CRYPTO_SECRET_KEY,
+
+  email_service: process.env.EMAIL_SERVICE,
+  email_from: process.env.EMAIL_FROM,
+  email_password: process.env.EMAIL_PASSWORD,
+  email_authorization: process.env.AUTHORIZATION,
 };

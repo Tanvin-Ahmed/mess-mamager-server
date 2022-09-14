@@ -13,6 +13,9 @@ const {
   addDeposit,
   deleteUserAccount,
   updatePaymentStatus,
+  verifyUser,
+  requestToResetPassword,
+  resetPassword,
 } = require("../post/user/user.controller");
 var router = express.Router();
 
@@ -28,5 +31,8 @@ router.put("/update-meal", tokenVerification, updateUserMeals);
 router.put("/add-deposit", tokenVerification, addDeposit);
 router.put("/delete-user-account", tokenVerification, deleteUserAccount);
 router.put("/update-payment-status", tokenVerification, updatePaymentStatus);
+router.get("/verify-user/:token", verifyUser);
+router.post("/request-for-reset-password", requestToResetPassword);
+router.put("/reset-password/:token", resetPassword);
 
 module.exports = router;

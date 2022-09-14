@@ -3,8 +3,15 @@ const {
   criptoPasswordGenerator,
 } = require("../../auth/criptoPasswordGenerator");
 const { tokenGenerator } = require("../../auth/tokenGenerator");
+const { checkUserTokenExpiration } = require("../../auth/tokenVerification");
 const { pushNotification } = require("../../pushNotification/pushNotification");
+const { sendEmail } = require("../../sendMail/sendMail");
 const { dataSendToClient } = require("../../socket/handlers/dataSendToClient");
+const {
+  getUserInfoFromServerStorage,
+  addUserInfoInServerStorage,
+  removeUserInfoFromServerStorage,
+} = require("../../storage/userStorage");
 const { getMonthWithYear } = require("../../utils/monthsName");
 const {
   removeMemberFromMessWhenAccountDelete,
@@ -26,6 +33,7 @@ const {
   updateManagerDateWhenAccountDelete,
   deleteAccount,
   updateUserPaymentStatus,
+  updatePassword,
 } = require("./user.service");
 
 const clientRootUlr = "http://localhost:3000";
@@ -42,23 +50,100 @@ const register = async (req, res) => {
     }
 
     const hashedPassword = await criptoPasswordGenerator(data.password);
-    const registerInfo = await registerUser({
-      ...data,
-      password: hashedPassword,
-    });
+
+    const userInfo = { ...data, password: hashedPassword };
+    delete userInfo.requestId;
+    addUserInfoInServerStorage(data.requestId, userInfo);
+
+    const token = tokenGenerator(
+      { email: data.email, requestId: data.requestId },
+      "180000ms"
+    );
+
+    const resetUrl = `http://localhost:3000/verify-user/${token}`;
+    const message = `
+                <div
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    text-align: center;
+                    padding: 2rem 0;
+                  "
+                >
+                  <img style="width: 40%" src="https://drive.google.com/uc?export=view&id=1kO0j3xh_MyCLpiL3Uz0m-JYpHYtIM9Zs" alt="logo" />
+                  <div style="text-align: center">
+                    <h1>Verify user</h1>
+                    <p>
+                      You just want to register
+                      <span style="color: dodgerblue">Mess Manager</span> app. We just check
+                      your email is valid and you are a valied user.
+                    </p>
+                    <p>You need to verify userself by click button below.</p>
+                    <h5 style="color: red">
+                      Expired this validation process after 3 minutes
+                    </h5>
+                    <a
+                      href=${resetUrl}
+                      clicktracking="off"
+                      style="
+                        text-decoration: none;
+                        background-color: dodgerblue;
+                        color: white;
+                        padding: 1rem 2rem;
+                        border-radius: 5px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                      "
+                      >Verify userself</a
+                    >
+                  </div>
+                </div>
+        `;
+    const options = {
+      to: data.email,
+      subject: "Verify user",
+      html: message,
+    };
+    sendEmail(options, res);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ status: "error", message: "Registration failed!" });
+  }
+};
+
+const verifyUser = async (req, res) => {
+  try {
+    const token = req.params.token;
+    const data = checkUserTokenExpiration(token, res);
+
+    const isEmailExit = await checkEmailDuplication(data.email);
+
+    if (isEmailExit) {
+      removeUserInfoFromServerStorage(data.requestId);
+      return res
+        .status(409)
+        .json({ message: "Email already exists!", error: true });
+    }
+
+    const userInfo = getUserInfoFromServerStorage(data.requestId);
+
+    const registerInfo = await registerUser(userInfo);
+
     const info = JSON.parse(JSON.stringify(registerInfo));
+
     delete info.password;
+
     const tokenData = {
       _id: info._id,
       username: info.username,
       email: info.email,
     };
-    const token = tokenGenerator(tokenData);
-    return res.status(200).json({ token, info });
+    const newToken = tokenGenerator(tokenData, "5d");
+
+    return res.status(200).json({ newToken, info });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ error: true, message: "Registration failed!" });
+    return res.status(401).json({ message: error.message });
   }
 };
 
@@ -84,12 +169,89 @@ const login = async (req, res) => {
       username: info.username,
       email: info.email,
     };
-    const token = tokenGenerator(tokenData);
+    const token = tokenGenerator(tokenData, "5d");
     return res.status(200).json({ token, info });
   } catch (error) {
     return res
       .status(500)
       .json({ error: true, message: "Authentication failed!" });
+  }
+};
+
+const requestToResetPassword = async (req, res) => {
+  try {
+    const email = req.body.email;
+    const isEmailExit = await checkEmailDuplication(email);
+
+    if (!isEmailExit) {
+      return res
+        .status(404)
+        .json({ message: "No user found!", status: "error" });
+    }
+
+    const token = tokenGenerator({ email: email }, "180000ms");
+
+    const resetUrl = `http://localhost:3000/reset-password/${token}`;
+    const message = `
+                <div style="text-align: center">
+                    <h1>Reset Password</h1>
+                    <p>
+                      You just request to reset your password of
+                      <span style="color: dodgerblue">Mess Manager</span> app.
+                    </p>
+                    <p>You can rest your password by clicking button below.</p>
+                    <h5 style="color: red">
+                      Expired this validation process after 3 minutes
+                    </h5>
+                    <a
+                      href=${resetUrl}
+                      clicktracking="off"
+                      style="
+                        text-decoration: none;
+                        background-color: dodgerblue;
+                        color: white;
+                        padding: 1rem 2rem;
+                        border-radius: 5px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                      "
+                      >Reset Password</a
+                    >
+                  </div>
+        `;
+    const options = {
+      to: email,
+      subject: "Reset Password",
+      html: message,
+    };
+    sendEmail(options, res);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong, please try again",
+      status: "error",
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const token = req.params.token;
+    const password = req.body.password;
+
+    const data = checkUserTokenExpiration(token, res);
+
+    const hashedPassword = await criptoPasswordGenerator(password);
+
+    await updatePassword(data.email, hashedPassword);
+
+    return res
+      .status(200)
+      .json({ message: "reset password successfully!", status: "success" });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong, please try again",
+      status: "error",
+    });
   }
 };
 
@@ -382,4 +544,7 @@ module.exports = {
   addDeposit,
   deleteUserAccount,
   updatePaymentStatus,
+  verifyUser,
+  requestToResetPassword,
+  resetPassword,
 };

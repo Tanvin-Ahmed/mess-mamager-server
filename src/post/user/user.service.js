@@ -22,6 +22,15 @@ const userLogin = async (email) => {
   });
 };
 
+const updatePassword = async (email, password) => {
+  return await postUser.updateOne(
+    { email },
+    {
+      password: password,
+    }
+  );
+};
+
 const getUserInfoById = async (id) => {
   const _id = mongoose.Types.ObjectId(id);
   return await postUser
@@ -268,4 +277,5 @@ module.exports = {
   updateManagerDateWhenAccountDelete,
   deleteAccount,
   updateUserPaymentStatus,
+  updatePassword,
 };
