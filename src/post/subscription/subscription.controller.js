@@ -13,14 +13,17 @@ const addSubscription = async (req, res) => {
     const subscriptionData = await subscriptionAlreadyExists(
       subscriptionInfo.userId
     );
-    const decryptedSubscriptionInfo = decrypt(subscriptionData.subscription);
 
-    if (
-      decryptedSubscriptionInfo.endpoint ===
-        subscriptionInfo.subscription.endpoint &&
-      subscriptionData.userId === subscriptionInfo.userId
-    ) {
-      return res.status(409).json({});
+    if (subscriptionData) {
+      const decryptedSubscriptionInfo = decrypt(subscriptionData.subscription);
+
+      if (
+        decryptedSubscriptionInfo.endpoint ===
+          subscriptionInfo.subscription.endpoint &&
+        subscriptionData.userId === subscriptionInfo.userId
+      ) {
+        return res.status(409).json({});
+      }
     }
 
     const cryptoText = encrypt(subscriptionInfo.subscription);
@@ -31,10 +34,9 @@ const addSubscription = async (req, res) => {
     };
     const data = await createSubscription(newSubscriptionInfo);
 
-    pushNotification([data], { title: "Push Notification" });
+    pushNotification([data], { id: uuidv4(), title: "Push Notification" });
     return res.status(201).json({});
   } catch (error) {
-    console.log(error);
     return res.status(500).json({ message: error.message });
   }
 };

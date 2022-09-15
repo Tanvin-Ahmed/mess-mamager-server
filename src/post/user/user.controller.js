@@ -35,6 +35,7 @@ const {
   updateUserPaymentStatus,
   updatePassword,
 } = require("./user.service");
+const { v4: uuidv4 } = require("uuid");
 
 const clientRootUlr = "http://localhost:3000";
 
@@ -312,6 +313,7 @@ const makeAdmin = async (req, res) => {
     if (memebersSubscriptionData.length) {
       memebersSubscriptionData.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: admin
             ? `Congratulations! You are new admin of ${userId.memberOfMess.messName} mess😍`
             : `You were removed from the admin of ${userId.memberOfMess.messName} mess!`,
@@ -353,6 +355,7 @@ const addMeals = async (req, res) => {
     if (userSubscription.length) {
       userSubscription.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: `${userId.username}📢📢!!! manager add your meals`,
           data: {
             url: clientRootUlr + "/profile",
@@ -391,6 +394,7 @@ const updateUserMeals = async (req, res) => {
     if (userSubscription.length) {
       userSubscription.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: `${userId.username}📢! Your meal update by manager!`,
           data: {
             url: clientRootUlr + "/profile",
@@ -423,6 +427,7 @@ const addDeposit = async (req, res) => {
     if (userSubscription.length) {
       userSubscription.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: `📢 ${userId.username} your total deposit amount is ${amount}.`,
           data: {
             url: clientRootUlr + "/profile",
@@ -503,6 +508,7 @@ const updatePaymentStatus = async (req, res) => {
     if (usersSubscription.length) {
       usersSubscription.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: paymentStatus
             ? `📢📢 ${
                 userId.username

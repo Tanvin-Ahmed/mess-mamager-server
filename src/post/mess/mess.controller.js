@@ -12,6 +12,7 @@ const {
   subscriptionsByUserIds,
 } = require("../subscription/subscription.service");
 const { pushNotification } = require("../../pushNotification/pushNotification");
+const { v4: uuidv4 } = require("uuid");
 
 const clientRootUlr = "http://localhost:3000";
 
@@ -63,6 +64,7 @@ const addMemberInMess = async (req, res) => {
     if (newMembersSubscriptionData.length) {
       newMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: `Welcome to "${userId.memberOfMess.messName}" mess!`,
           data: {
             url: clientRootUlr + "/",
@@ -74,6 +76,7 @@ const addMemberInMess = async (req, res) => {
     if (oldMembersSubscriptionData.length) {
       oldMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
+          id: uuidv4(),
           body: `Added new members in mess!`,
         });
       });

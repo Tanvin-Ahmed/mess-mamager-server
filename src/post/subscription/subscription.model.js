@@ -8,7 +8,6 @@ const postSubscription = new Schema(
     userId: {
       type: Schema.Types.ObjectId,
       require: true,
-      unique: true,
       ref: config.user_info_collection,
     },
     subscription: {
