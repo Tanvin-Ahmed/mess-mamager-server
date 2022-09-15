@@ -17,7 +17,8 @@ const addSubscription = async (req, res) => {
 
     if (
       decryptedSubscriptionInfo.endpoint ===
-      subscriptionInfo.subscription.endpoint
+        subscriptionInfo.subscription.endpoint &&
+      subscriptionData.userId === subscriptionInfo.userId
     ) {
       return res.status(409).json({});
     }

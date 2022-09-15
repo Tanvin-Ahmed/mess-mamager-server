@@ -312,15 +312,15 @@ const makeAdmin = async (req, res) => {
     if (memebersSubscriptionData.length) {
       memebersSubscriptionData.forEach(async ({ subscription, userId }) => {
         await pushNotification(subscription, {
-          body: `Congratulations! You are new admin of ${userId.memberOfMess.messName} mess😍`,
+          body: admin
+            ? `Congratulations! You are new admin of ${userId.memberOfMess.messName} mess😍`
+            : `You were removed from the admin of ${userId.memberOfMess.messName} mess!`,
           data: {
             url: clientRootUlr + "/admin-dashboard",
           },
         });
       });
     }
-
-    await pushNotification();
 
     return res.status(200).json({
       updatedUser,
