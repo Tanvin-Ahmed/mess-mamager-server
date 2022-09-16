@@ -263,6 +263,101 @@ const updateUserPaymentStatus = async (userId, paymentStatus, date) => {
     .select("_id monthList");
 };
 
+const checkNotificationLimits = async (ids = [], session) => {
+  try {
+    const usersInfo = await postUser.find({ _id: [...ids] });
+
+    if (usersInfo.length) {
+      usersInfo.forEach(async (userInfo) => {
+        if (userInfo.notifications) {
+          if (userInfo.notifications.length >= 20) {
+            const _id = mongoose.Types.ObjectId(userInfo._id);
+            await postUser.findByIdAndUpdate(
+              _id,
+              {
+                $pop: {
+                  notifications: -1,
+                },
+              },
+              { session: session }
+            );
+          }
+        }
+      });
+    }
+    return;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const updateNotificationBySingleUserId = async (id, notificationData) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const _id = mongoose.Types.ObjectId(id);
+
+    await checkNotificationLimits([_id], session);
+
+    const updatedUser = await postUser
+      .findByIdAndUpdate(
+        _id,
+        {
+          $addToSet: {
+            notifications: notificationData,
+          },
+        },
+        { session: session, new: true }
+      )
+      .select("_id notifications");
+    await session.commitTransaction();
+    await session.endSession();
+
+    return updatedUser;
+  } catch (error) {
+    await session.commitTransaction();
+    await session.endSession();
+
+    return error;
+  }
+};
+
+const updateNotificationByUsersId = async (usersId, notificationData) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    await checkNotificationLimits(usersId, session);
+
+    await postUser.updateMany(
+      { _id: [...usersId] },
+      { $addToSet: { notifications: notificationData } },
+      { session: session }
+    );
+    await session.commitTransaction();
+    await session.endSession();
+
+    return { message: "successfully add notifications", status: "success" };
+  } catch (error) {
+    await session.commitTransaction();
+    await session.endSession();
+    throw new Error(error);
+  }
+};
+
+const updateUserNotificationsView = async (userId, notifications) => {
+  const _id = mongoose.Types.ObjectId(userId);
+
+  return await postUser
+    .findByIdAndUpdate(
+      _id,
+      {
+        notifications: notifications,
+      },
+      { new: true }
+    )
+    .select("_id notifications");
+};
+
 module.exports = {
   registerUser,
   userLogin,
@@ -278,4 +373,7 @@ module.exports = {
   deleteAccount,
   updateUserPaymentStatus,
   updatePassword,
+  updateNotificationBySingleUserId,
+  updateNotificationByUsersId,
+  updateUserNotificationsView,
 };

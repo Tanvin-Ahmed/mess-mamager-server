@@ -13,8 +13,7 @@ const {
 } = require("../subscription/subscription.service");
 const { pushNotification } = require("../../pushNotification/pushNotification");
 const { v4: uuidv4 } = require("uuid");
-
-const clientRootUlr = "http://localhost:3000";
+const { updateNotificationByUsersId } = require("../user/user.service");
 
 const makeMess = async (req, res) => {
   try {
@@ -62,23 +61,42 @@ const addMemberInMess = async (req, res) => {
     const oldMembersSubscriptionData = await subscriptionsByUserIds(oldMembers);
 
     if (newMembersSubscriptionData.length) {
-      newMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: `Welcome to "${userId.memberOfMess.messName}" mess!`,
-          data: {
-            url: clientRootUlr + "/",
-          },
-        });
+      const notificationData = {
+        id: uuidv4(),
+        body: `Welcome to "${newMembersSubscriptionData[0].userId.memberOfMess.messName}" mess!`,
+        data: {
+          url: "/",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notifications in DB
+      await updateNotificationByUsersId(newMembers, notificationData);
+      dataSendToClient("user-notification", notificationData, [...newMembers]);
+      // push notification to client
+      newMembersSubscriptionData.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
     if (oldMembersSubscriptionData.length) {
-      oldMembersSubscriptionData.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: `Added new members in mess!`,
-        });
+      const notificationData = {
+        id: uuidv4(),
+        body: `Added new members in mess!`,
+        data: {
+          url: "/",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notifications in DB
+      await updateNotificationByUsersId(oldMembers, notificationData);
+      dataSendToClient("user-notification", notificationData, [...oldMembers]);
+      // push notification to client
+      oldMembersSubscriptionData.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 

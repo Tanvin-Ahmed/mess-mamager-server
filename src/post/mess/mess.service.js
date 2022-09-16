@@ -124,6 +124,7 @@ const removeMemberFromMess = async (userId, messId) => {
         managerOfTheMonths: [],
         admin: false,
         monthList: {},
+        notifications: [],
       },
       { session: session, new: true }
     );

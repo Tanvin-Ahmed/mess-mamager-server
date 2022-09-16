@@ -1,5 +1,4 @@
 const { encrypt, decrypt } = require("../../crypto/crypto");
-const { pushNotification } = require("../../pushNotification/pushNotification");
 const {
   createSubscription,
   subscriptionAlreadyExists,
@@ -32,9 +31,9 @@ const addSubscription = async (req, res) => {
       ...subscriptionInfo,
       subscription: cryptoText,
     };
-    const data = await createSubscription(newSubscriptionInfo);
 
-    pushNotification([data], { id: uuidv4(), title: "Push Notification" });
+    await createSubscription(newSubscriptionInfo);
+
     return res.status(201).json({});
   } catch (error) {
     return res.status(500).json({ message: error.message });

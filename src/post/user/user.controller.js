@@ -7,6 +7,7 @@ const { checkUserTokenExpiration } = require("../../auth/tokenVerification");
 const { pushNotification } = require("../../pushNotification/pushNotification");
 const { sendEmail } = require("../../sendMail/sendMail");
 const { dataSendToClient } = require("../../socket/handlers/dataSendToClient");
+const { v4: uuidv4 } = require("uuid");
 const {
   getUserInfoFromServerStorage,
   addUserInfoInServerStorage,
@@ -34,10 +35,10 @@ const {
   deleteAccount,
   updateUserPaymentStatus,
   updatePassword,
+  updateNotificationByUsersId,
+  updateNotificationBySingleUserId,
+  updateUserNotificationsView,
 } = require("./user.service");
-const { v4: uuidv4 } = require("uuid");
-
-const clientRootUlr = "http://localhost:3000";
 
 const register = async (req, res) => {
   try {
@@ -311,16 +312,26 @@ const makeAdmin = async (req, res) => {
     ]);
 
     if (memebersSubscriptionData.length) {
-      memebersSubscriptionData.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: admin
-            ? `Congratulations! You are new admin of ${userId.memberOfMess.messName} mess😍`
-            : `You were removed from the admin of ${userId.memberOfMess.messName} mess!`,
-          data: {
-            url: clientRootUlr + "/admin-dashboard",
-          },
-        });
+      const messName = memebersSubscriptionData[0].userId.memberOfMess.messName;
+
+      const notificationData = {
+        id: uuidv4(),
+        body: admin
+          ? `Congratulations! ${updatedUser.username} select as new admin of ${messName} mess😍`
+          : `${updatedUser.username} remove from the admin of ${messName} mess!`,
+        data: {
+          url: "/admin-dashboard",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notification in DB
+      await updateNotificationByUsersId(membersId, notificationData);
+
+      // push notification to client
+      memebersSubscriptionData.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
@@ -353,14 +364,26 @@ const addMeals = async (req, res) => {
     const userSubscription = await subscriptionsByUserIds([id]);
 
     if (userSubscription.length) {
-      userSubscription.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: `${userId.username}📢📢!!! manager add your meals`,
-          data: {
-            url: clientRootUlr + "/profile",
-          },
-        });
+      const notificationData = {
+        id: uuidv4(),
+        body: `${userSubscription[0].userId.username}📢📢!!! manager add your meals`,
+        data: {
+          url: "/profile",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notification in DB
+      const userNotificationData = await updateNotificationBySingleUserId(
+        id,
+        notificationData
+      );
+      dataSendToClient("user-notification", userNotificationData, [id]);
+
+      // push notification to client
+      userSubscription.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
@@ -392,14 +415,26 @@ const updateUserMeals = async (req, res) => {
     const userSubscription = await subscriptionsByUserIds([id]);
 
     if (userSubscription.length) {
-      userSubscription.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: `${userId.username}📢! Your meal update by manager!`,
-          data: {
-            url: clientRootUlr + "/profile",
-          },
-        });
+      const notificationData = {
+        id: uuidv4(),
+        body: `${userSubscription[0].userId.username}📢! Your meal update by manager! Now your total meal is ${totalMeal}`,
+        data: {
+          url: "/profile",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notification in DB
+      const userNotificationData = await updateNotificationBySingleUserId(
+        id,
+        notificationData
+      );
+      dataSendToClient("user-notification", userNotificationData, [id]);
+
+      // push notification to client
+      userSubscription.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
@@ -425,14 +460,26 @@ const addDeposit = async (req, res) => {
     dataSendToClient("add-deposit", updatedInfo, [...membersId]);
 
     if (userSubscription.length) {
-      userSubscription.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: `📢 ${userId.username} your total deposit amount is ${amount}.`,
-          data: {
-            url: clientRootUlr + "/profile",
-          },
-        });
+      const notificationData = {
+        id: uuidv4(),
+        body: `📢 ${userSubscription[0].userId.username} your total deposit amount is ${amount}.`,
+        data: {
+          url: "/profile",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      // store notification in DB
+      const userNotificationData = await updateNotificationBySingleUserId(
+        userId,
+        notificationData
+      );
+      dataSendToClient("user-notification", userNotificationData, [userId]);
+
+      // push notification to client
+      userSubscription.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
@@ -503,28 +550,32 @@ const updatePaymentStatus = async (req, res) => {
       ...membersId,
     ]);
 
-    const usersSubscription = await subscriptionsByUserIds([userId]);
+    const userSubscription = await subscriptionsByUserIds([userId]);
 
-    if (usersSubscription.length) {
-      usersSubscription.forEach(async ({ subscription, userId }) => {
-        await pushNotification(subscription, {
-          id: uuidv4(),
-          body: paymentStatus
-            ? `📢📢 ${
-                userId.username
-              }, you completed the transaction of month ${getMonthWithYear(
-                date
-              )}!`
-            : `📢📢 ${
-                userId.username
-              }, you not complete the transaction of month ${getMonthWithYear(
-                date
-              )}! Please do that as soon as possible!`,
+    if (userSubscription.length) {
+      const notificationData = {
+        id: uuidv4(),
+        body: paymentStatus
+          ? `📢📢 ${
+              userSubscription[0].userId.username
+            }, you completed the transaction of month ${getMonthWithYear(
+              date
+            )}!`
+          : `📢📢 ${
+              userSubscription[0].userId.username
+            }, you not complete the transaction of month ${getMonthWithYear(
+              date
+            )}! Please do that as soon as possible!`,
 
-          data: {
-            url: clientRootUlr + "/profile",
-          },
-        });
+        data: {
+          url: "/profile",
+        },
+        createdAt: new Date().toUTCString(),
+        seen: false,
+      };
+
+      userSubscription.forEach(async ({ subscription }) => {
+        await pushNotification(subscription, notificationData);
       });
     }
 
@@ -535,6 +586,27 @@ const updatePaymentStatus = async (req, res) => {
       message: "Payment status not updated, please try again!",
       error: true,
     });
+  }
+};
+
+const updateNotifications = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const notifications = req.body.notifications;
+
+    const updatedNotifications = await updateUserNotificationsView(
+      userId,
+      notifications
+    );
+
+    dataSendToClient("user-notification", updatedNotifications, [userId]);
+
+    return res.status(200).json({
+      message: "successfully updated notification seen status!",
+      status: "success",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message, status: "error" });
   }
 };
 
@@ -553,4 +625,5 @@ module.exports = {
   verifyUser,
   requestToResetPassword,
   resetPassword,
+  updateNotifications,
 };

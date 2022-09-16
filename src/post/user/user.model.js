@@ -34,6 +34,10 @@ const userSchema = new Schema(
       type: Object,
       default: {},
     },
+    notifications: {
+      type: Array,
+      default: [],
+    },
   },
   {
     versionKey: false,

@@ -16,6 +16,7 @@ const {
   verifyUser,
   requestToResetPassword,
   resetPassword,
+  updateNotifications,
 } = require("../post/user/user.controller");
 var router = express.Router();
 
@@ -34,5 +35,10 @@ router.put("/update-payment-status", tokenVerification, updatePaymentStatus);
 router.get("/verify-user/:token", verifyUser);
 router.post("/request-for-reset-password", requestToResetPassword);
 router.put("/reset-password/:token", resetPassword);
+router.put(
+  "/update-notification-seen/:userId",
+  tokenVerification,
+  updateNotifications
+);
 
 module.exports = router;
