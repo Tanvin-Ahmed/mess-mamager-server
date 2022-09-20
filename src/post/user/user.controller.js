@@ -40,6 +40,39 @@ const {
   updateUserNotificationsView,
 } = require("./user.service");
 
+const signInWithFirebase = async (req, res) => {
+  try {
+    const data = req.body;
+
+    const isEmailExit = await checkEmailDuplication(data.email);
+
+    let registerInfo;
+
+    if (isEmailExit) {
+      registerInfo = await userLogin(data.email);
+    } else {
+      registerInfo = await registerUser(data);
+    }
+
+    const info = JSON.parse(JSON.stringify(registerInfo));
+
+    if (info.password) {
+      delete info.password;
+    }
+
+    const tokenData = {
+      _id: info._id,
+      username: info.username,
+      email: info.email,
+    };
+    const token = tokenGenerator(tokenData, "5d");
+
+    return res.status(200).json({ token, info });
+  } catch (error) {
+    return res.status(401).json({ message: error.message });
+  }
+};
+
 const register = async (req, res) => {
   try {
     const data = req.body;
@@ -335,6 +368,8 @@ const makeAdmin = async (req, res) => {
       });
     }
 
+    dataSendToClient("user-notification", notificationData, [...membersId]);
+
     return res.status(200).json({
       updatedUser,
       message: updatedUser.admin
@@ -366,7 +401,7 @@ const addMeals = async (req, res) => {
     if (userSubscription.length) {
       const notificationData = {
         id: uuidv4(),
-        body: `${userSubscription[0].userId.username}📢📢!!! manager add your meals`,
+        body: `${userSubscription[0].userId.username}📢📢!!! manager add your meals. Now your total meals ${totalMeal}.`,
         data: {
           url: "/profile",
         },
@@ -579,6 +614,8 @@ const updatePaymentStatus = async (req, res) => {
       });
     }
 
+    dataSendToClient("user-notification", notificationData, [userId]);
+
     return res.status(200).json({ status: "success" });
   } catch (error) {
     console.log(error);
@@ -591,15 +628,12 @@ const updatePaymentStatus = async (req, res) => {
 
 const updateNotifications = async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const notifications = req.body.notifications;
+    const userId = req.body.userId;
+    const needToUpdateNumber = req.body.count;
 
-    const updatedNotifications = await updateUserNotificationsView(
-      userId,
-      notifications
-    );
-
-    dataSendToClient("user-notification", updatedNotifications, [userId]);
+    [...new Array(needToUpdateNumber)].forEach(async () => {
+      await updateUserNotificationsView(userId);
+    });
 
     return res.status(200).json({
       message: "successfully updated notification seen status!",
@@ -611,6 +645,7 @@ const updateNotifications = async (req, res) => {
 };
 
 module.exports = {
+  signInWithFirebase,
   register,
   login,
   getUserInfo,

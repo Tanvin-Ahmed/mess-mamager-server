@@ -17,10 +17,12 @@ const {
   requestToResetPassword,
   resetPassword,
   updateNotifications,
+  signInWithFirebase,
 } = require("../post/user/user.controller");
 var router = express.Router();
 
 router.post("/register", register);
+router.post("/create-account-with-firebase", signInWithFirebase);
 router.post("/login", login);
 router.post("/refresh-token", refreshTokenGenerator);
 router.get("/get-user-info-by-id/:id", tokenVerification, getUserInfo);
@@ -36,7 +38,7 @@ router.get("/verify-user/:token", verifyUser);
 router.post("/request-for-reset-password", requestToResetPassword);
 router.put("/reset-password/:token", resetPassword);
 router.put(
-  "/update-notification-seen/:userId",
+  "/update-notification-seen",
   tokenVerification,
   updateNotifications
 );

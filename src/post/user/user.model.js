@@ -12,7 +12,6 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      require: true,
     },
     username: {
       type: String,
@@ -37,6 +36,9 @@ const userSchema = new Schema(
     notifications: {
       type: Array,
       default: [],
+    },
+    photoUrl: {
+      type: String,
     },
   },
   {

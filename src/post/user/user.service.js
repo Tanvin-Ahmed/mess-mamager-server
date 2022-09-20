@@ -98,7 +98,7 @@ const updateAdminData = async (id, adminData) => {
   const _id = mongoose.Types.ObjectId(id);
   return await postUser
     .findByIdAndUpdate(_id, { admin: adminData }, { new: true })
-    .select("_id admin");
+    .select("_id admin username");
 };
 
 const AddMeal = async ({ id, meals, date, messId, totalMeal }) => {
@@ -344,18 +344,13 @@ const updateNotificationByUsersId = async (usersId, notificationData) => {
   }
 };
 
-const updateUserNotificationsView = async (userId, notifications) => {
+const updateUserNotificationsView = async (userId) => {
   const _id = mongoose.Types.ObjectId(userId);
 
-  return await postUser
-    .findByIdAndUpdate(
-      _id,
-      {
-        notifications: notifications,
-      },
-      { new: true }
-    )
-    .select("_id notifications");
+  return await postUser.updateOne(
+    { _id: _id, "notifications.seen": false },
+    { $set: { "notifications.$.seen": true } }
+  );
 };
 
 module.exports = {
