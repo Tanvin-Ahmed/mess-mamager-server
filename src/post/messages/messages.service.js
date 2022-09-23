@@ -34,6 +34,11 @@ const findOlderMessages = async (messId, limit, page) => {
       path: "react.sender",
       model: config.user_info_collection,
       select: "_id username photoUrl",
+    })
+    .populate({
+      path: "seen",
+      model: config.user_info_collection,
+      select: "_id username photoUrl",
     });
 };
 
@@ -110,6 +115,24 @@ const updateMessageTextInDB = async (message) => {
     .select("_id message updatedAt");
 };
 
+const updateSeenStatusInDB = async (info) => {
+  const _ids = info.messagesId.map((id) => mongoose.Types.ObjectId(id));
+  const _userId = mongoose.Types.ObjectId(info.userId);
+
+  await postMessage.updateMany(
+    { _id: _ids },
+    {
+      $addToSet: { seen: _userId },
+    }
+  );
+
+  return await postMessage.find({ _id: _ids }).select("_id seen").populate({
+    path: "seen",
+    model: config.user_info_collection,
+    select: "_id username photoUrl",
+  });
+};
+
 module.exports = {
   createMessage,
   findChatCount,
@@ -119,4 +142,5 @@ module.exports = {
   deleteUserReactFromDB,
   deleteMessageFromDB,
   updateMessageTextInDB,
+  updateSeenStatusInDB,
 };

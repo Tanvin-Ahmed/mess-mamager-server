@@ -9,6 +9,7 @@ const {
   deleteUserReactFromDB,
   deleteMessageFromDB,
   updateMessageTextInDB,
+  updateSeenStatusInDB,
 } = require("./messages.service");
 const { v4: uuidv4 } = require("uuid");
 const { pushNotification } = require("../../pushNotification/pushNotification");
@@ -174,6 +175,28 @@ const updateMessage = async (req, res) => {
   }
 };
 
+const updateSeenStatus = async (req, res) => {
+  try {
+    const info = req.body;
+
+    const data = await updateSeenStatusInDB(info);
+
+    dataSendToClient("update-seen-status-of-messages", data, [
+      ...info.membersId,
+    ]);
+
+    return res
+      .status(200)
+      .json({ message: "seen updated successfully!", status: "info" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Seen not updated, please try again!",
+      status: "error",
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessageCount,
@@ -183,4 +206,5 @@ module.exports = {
   deleteUserReact,
   deleteMessage,
   updateMessage,
+  updateSeenStatus,
 };
