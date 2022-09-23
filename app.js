@@ -9,6 +9,7 @@ const webpush = require("web-push");
 const indexRouter = require("./src/routes/index");
 const usersRouter = require("./src/routes/users");
 const messRouter = require("./src/routes/mess");
+const messageRouter = require("./src/routes/chats");
 const { socketServerConnetion } = require("./src/socket/socket");
 const { config } = require("./src/config/config");
 const { decrypt } = require("./src/crypto/crypto");
@@ -26,6 +27,7 @@ app.use(cors());
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/mess", messRouter);
+app.use("/message", messageRouter);
 
 const server = http.createServer(app);
 socketServerConnetion(server);

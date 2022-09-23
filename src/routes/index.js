@@ -1,10 +1,11 @@
-var express = require("express");
+const express = require("express");
 const { tokenVerification } = require("../auth/tokenVerification");
 const {
   addSubscription,
   getUserSubscription,
 } = require("../post/subscription/subscription.controller");
-var router = express.Router();
+
+const router = express.Router();
 
 /* GET home page. */
 router.get("/", function (req, res, next) {

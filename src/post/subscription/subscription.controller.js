@@ -18,10 +18,9 @@ const addSubscription = async (req, res) => {
 
       if (
         decryptedSubscriptionInfo.endpoint ===
-          subscriptionInfo.subscription.endpoint &&
-        subscriptionData.userId === subscriptionInfo.userId
+        subscriptionInfo.subscription.endpoint
       ) {
-        return res.status(409).json({});
+        return res.status(200).json({});
       }
     }
 
@@ -36,7 +35,7 @@ const addSubscription = async (req, res) => {
 
     return res.status(201).json({});
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: "Already registered!" });
   }
 };
 
