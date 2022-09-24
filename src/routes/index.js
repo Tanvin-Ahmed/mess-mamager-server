@@ -3,6 +3,7 @@ const { tokenVerification } = require("../auth/tokenVerification");
 const {
   addSubscription,
   getUserSubscription,
+  deleteUserSubscription,
 } = require("../post/subscription/subscription.controller");
 
 const router = express.Router();
@@ -14,4 +15,6 @@ router.get("/", function (req, res, next) {
 
 router.post("/subscription", tokenVerification, addSubscription);
 router.post("/find-subscriptions", getUserSubscription);
+router.put("/subscription/delete", deleteUserSubscription);
+
 module.exports = router;

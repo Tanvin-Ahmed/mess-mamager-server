@@ -37,8 +37,22 @@ const subscriptionsByUserIds = async (userIds) => {
   }
 };
 
+const subscriptionsByUserId = async (userId) => {
+  const _userId = mongoose.Types.ObjectId(userId);
+
+  return await postSubscription.find({ userId: _userId });
+};
+
+const deleteSubscription = async (subscriptionId) => {
+  const _id = mongoose.Types.ObjectId(subscriptionId);
+
+  return await postSubscription.findByIdAndDelete(_id);
+};
+
 module.exports = {
   createSubscription,
   subscriptionAlreadyExists,
   subscriptionsByUserIds,
+  subscriptionsByUserId,
+  deleteSubscription,
 };

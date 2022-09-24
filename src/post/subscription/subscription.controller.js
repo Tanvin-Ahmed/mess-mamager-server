@@ -3,6 +3,8 @@ const {
   createSubscription,
   subscriptionAlreadyExists,
   subscriptionsByUserIds,
+  deleteSubscription,
+  subscriptionsByUserId,
 } = require("./subscription.service");
 
 const addSubscription = async (req, res) => {
@@ -52,7 +54,41 @@ const getUserSubscription = async (req, res) => {
   }
 };
 
+const deleteUserSubscription = async (req, res) => {
+  try {
+    const subscription = req.body;
+
+    const subscriptionInfo = await subscriptionsByUserId(subscription.userId);
+
+    const sub = subscriptionInfo.map((sub) => {
+      const subscript = JSON.parse(JSON.stringify(sub));
+      const subscription = decrypt(subscript.subscription);
+      delete subscript.subscription;
+      return { ...subscript, subscription };
+    });
+
+    let requiredSubscription = sub.find(
+      (sub) => sub.subscription.endpoint === subscription.subscription.endpoint
+    );
+
+    if (requiredSubscription) {
+      await deleteSubscription(requiredSubscription._id);
+    }
+
+    return res.status(200).json({
+      message: "Delete subscription successfully",
+      status: "error",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "something went wrong, please try again!",
+      status: "error",
+    });
+  }
+};
+
 module.exports = {
   addSubscription,
   getUserSubscription,
+  deleteUserSubscription,
 };
