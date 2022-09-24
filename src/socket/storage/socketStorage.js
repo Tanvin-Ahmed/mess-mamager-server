@@ -1,13 +1,9 @@
 let activeUsers = [];
 
 const setActiveUsers = (data) => {
-  const index = activeUsers.findIndex((u) => u.userId === data.userId);
+  activeUsers.push(data);
 
-  if (index !== -1) {
-    activeUsers.splice(index, 1, data);
-  } else {
-    activeUsers.push(data);
-  }
+  console.log(activeUsers);
 };
 
 const deleteActiveUsers = (socketId) => {
