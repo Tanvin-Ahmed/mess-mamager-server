@@ -17,6 +17,9 @@ const userSchema = new Schema(
       type: String,
       require: true,
     },
+    firebaseUID: {
+      type: String,
+    },
     managerOfTheMonths: {
       type: Array,
       default: [],

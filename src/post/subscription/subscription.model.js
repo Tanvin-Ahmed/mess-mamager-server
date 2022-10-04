@@ -11,7 +11,7 @@ const postSubscription = new Schema(
       ref: config.user_info_collection,
     },
     subscription: {
-      type: Object,
+      type: String,
       require: true,
     },
   },

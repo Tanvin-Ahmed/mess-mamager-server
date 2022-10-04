@@ -39,6 +39,7 @@ const {
   updateNotificationBySingleUserId,
   updateUserNotificationsView,
 } = require("./user.service");
+const { firebaseAdminAuth } = require("../../firebase/admin/firebaseAdmin");
 
 const signInWithFirebase = async (req, res) => {
   try {
@@ -545,13 +546,19 @@ const updateAllMembersManagerDate = async (dates, index) => {
 
 const deleteUserAccount = async (req, res) => {
   try {
-    const { userId, membersId, updatedManagerOfTheMonth, messId } = req.body;
+    const { userId, membersId, updatedManagerOfTheMonth, messId, firebaseUID } =
+      req.body;
+
+    if (firebaseUID) {
+      await firebaseAdminAuth.deleteUser(firebaseUID);
+    }
 
     await deleteAccount(userId);
 
-    await removeMemberFromMessWhenAccountDelete(userId, messId);
-
-    await updateAllMembersManagerDate(updatedManagerOfTheMonth, 0);
+    if (messId) {
+      await removeMemberFromMessWhenAccountDelete(userId, messId);
+      await updateAllMembersManagerDate(updatedManagerOfTheMonth, 0);
+    }
 
     dataSendToClient(
       "delete-user-account",

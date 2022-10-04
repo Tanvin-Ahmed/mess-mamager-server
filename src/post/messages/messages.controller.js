@@ -26,7 +26,10 @@ const sendMessage = async (req, res) => {
     dataSendToClient("new-message", newMessage, [...membersId]);
 
     const offlineUsers = getOffLineUsers([...membersId]);
+
     const membersSubscriptionData = await subscriptionsByUserIds(offlineUsers);
+
+    console.log(membersSubscriptionData);
 
     if (membersSubscriptionData.length > 0) {
       const notificationData = {

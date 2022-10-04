@@ -21,6 +21,10 @@ module.exports.socketServerConnetion = (server) => {
   io.on("connect", (socket) => {
     newConnectionHandler(socket);
 
+    socket.on("fource-to-disconnect", () => {
+      socket.disconnect();
+    });
+
     socket.on("disconnect", () => {
       disconnectHandler(socket);
     });

@@ -2,8 +2,6 @@ let activeUsers = [];
 
 const setActiveUsers = (data) => {
   activeUsers.push(data);
-
-  console.log(activeUsers);
 };
 
 const deleteActiveUsers = (socketId) => {

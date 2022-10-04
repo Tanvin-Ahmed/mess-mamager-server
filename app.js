@@ -4,7 +4,6 @@ const cors = require("cors");
 require("dotenv").config();
 const http = require("http");
 require("./src/db/db");
-const webpush = require("web-push");
 
 const indexRouter = require("./src/routes/index");
 const usersRouter = require("./src/routes/users");
