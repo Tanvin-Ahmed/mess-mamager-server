@@ -309,7 +309,7 @@ const updateNotificationBySingleUserId = async (id, notificationData) => {
         },
         { session: session, new: true }
       )
-      .select("_id notifications");
+      .select("_id");
     await session.commitTransaction();
     await session.endSession();
 

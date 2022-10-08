@@ -17,7 +17,9 @@ const monthNames = [
 const getMonthWithYear = (date) => {
   if (!date) return "";
 
-  return `${new Date(date).getMonth() + 1}, ${new Date(date).getFullYear()}`;
+  return `${monthNames[new Date(date).getMonth() + 1]}, ${new Date(
+    date
+  ).getFullYear()}`;
 };
 
 module.exports = {

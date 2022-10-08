@@ -367,9 +367,9 @@ const makeAdmin = async (req, res) => {
       memebersSubscriptionData.forEach(async ({ subscription }) => {
         await pushNotification(subscription, notificationData);
       });
-    }
 
-    dataSendToClient("user-notification", notificationData, [...membersId]);
+      dataSendToClient("user-notification", notificationData, [...membersId]);
+    }
 
     return res.status(200).json({
       updatedUser,
@@ -378,7 +378,9 @@ const makeAdmin = async (req, res) => {
         : "Remove admin successfully!",
     });
   } catch (error) {
-    return res.status(500).json({ error: true, message: "Admin not created!" });
+    return res
+      .status(500)
+      .json({ error: true, message: "Something went worng!" });
   }
 };
 
@@ -402,7 +404,11 @@ const addMeals = async (req, res) => {
     if (userSubscription.length) {
       const notificationData = {
         id: uuidv4(),
-        body: `${userSubscription[0].userId.username}📢📢!!! manager add your meals. Now your total meals ${totalMeal}.`,
+        body: `${
+          userSubscription[0].userId.username
+        }📢📢!!! manager add your meals. Now your total meals of ${getMonthWithYear(
+          date
+        )} is ${totalMeal}.`,
         data: {
           url: "/profile",
         },
@@ -411,11 +417,8 @@ const addMeals = async (req, res) => {
       };
 
       // store notification in DB
-      const userNotificationData = await updateNotificationBySingleUserId(
-        id,
-        notificationData
-      );
-      dataSendToClient("user-notification", userNotificationData, [id]);
+      await updateNotificationBySingleUserId(id, notificationData);
+      dataSendToClient("user-notification", notificationData, [id]);
 
       // push notification to client
       userSubscription.forEach(async ({ subscription }) => {
@@ -462,11 +465,8 @@ const updateUserMeals = async (req, res) => {
       };
 
       // store notification in DB
-      const userNotificationData = await updateNotificationBySingleUserId(
-        id,
-        notificationData
-      );
-      dataSendToClient("user-notification", userNotificationData, [id]);
+      await updateNotificationBySingleUserId(id, notificationData);
+      dataSendToClient("user-notification", notificationData, [id]);
 
       // push notification to client
       userSubscription.forEach(async ({ subscription }) => {
@@ -507,11 +507,8 @@ const addDeposit = async (req, res) => {
       };
 
       // store notification in DB
-      const userNotificationData = await updateNotificationBySingleUserId(
-        userId,
-        notificationData
-      );
-      dataSendToClient("user-notification", userNotificationData, [userId]);
+      await updateNotificationBySingleUserId(userId, notificationData);
+      dataSendToClient("user-notification", notificationData, [userId]);
 
       // push notification to client
       userSubscription.forEach(async ({ subscription }) => {
@@ -619,9 +616,9 @@ const updatePaymentStatus = async (req, res) => {
       userSubscription.forEach(async ({ subscription }) => {
         await pushNotification(subscription, notificationData);
       });
-    }
 
-    dataSendToClient("user-notification", notificationData, [userId]);
+      dataSendToClient("user-notification", notificationData, [userId]);
+    }
 
     return res.status(200).json({ status: "success" });
   } catch (error) {

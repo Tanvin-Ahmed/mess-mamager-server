@@ -59,6 +59,7 @@ const getMessInfoById = async (id) => {
       model: config.user_info_collection,
       select: "email _id username managerOfTheMonths admin monthList",
     })
+    .slice({ members: [0, 10] })
     .select("-createdAt -updatedAt")
     .exec();
 };
