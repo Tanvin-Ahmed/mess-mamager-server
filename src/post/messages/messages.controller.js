@@ -29,8 +29,6 @@ const sendMessage = async (req, res) => {
 
     const membersSubscriptionData = await subscriptionsByUserIds(offlineUsers);
 
-    console.log(membersSubscriptionData);
-
     if (membersSubscriptionData.length > 0) {
       const notificationData = {
         id: uuidv4(),
@@ -48,7 +46,9 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    return res.status(200).json({});
+    return res
+      .status(200)
+      .json({ message: "message sent successfully", status: "success" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
