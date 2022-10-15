@@ -40,6 +40,8 @@ const {
   updateUserNotificationsView,
 } = require("./user.service");
 const { firebaseAdminAuth } = require("../../firebase/admin/firebaseAdmin");
+const { getOffLineUsers } = require("../../socket/hooks/getOfflineUsers");
+const { decrypt } = require("../../crypto/crypto");
 
 const signInWithFirebase = async (req, res) => {
   try {
@@ -185,12 +187,15 @@ const verifyUser = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const data = req.body;
-    const userInfo = await userLogin(data.email);
+    const loginData = req.body;
+    // console.log(data);
+    // const loginData = decrypt(data);
+
+    const userInfo = await userLogin(loginData.email);
     const info = JSON.parse(JSON.stringify(userInfo));
 
     const checkPassword = await criptoPasswordChecker(
-      data.password,
+      loginData.password,
       info.password
     );
 
@@ -420,10 +425,14 @@ const addMeals = async (req, res) => {
       await updateNotificationBySingleUserId(id, notificationData);
       dataSendToClient("user-notification", notificationData, [id]);
 
-      // push notification to client
-      userSubscription.forEach(async ({ subscription }) => {
-        await pushNotification(subscription, notificationData);
-      });
+      const isUserInactive = getOffLineUsers([id]);
+
+      if (isUserInactive.length) {
+        // push notification to client
+        userSubscription.forEach(async ({ subscription }) => {
+          await pushNotification(subscription, notificationData);
+        });
+      }
     }
 
     return res.status(201).json({
@@ -468,10 +477,14 @@ const updateUserMeals = async (req, res) => {
       await updateNotificationBySingleUserId(id, notificationData);
       dataSendToClient("user-notification", notificationData, [id]);
 
-      // push notification to client
-      userSubscription.forEach(async ({ subscription }) => {
-        await pushNotification(subscription, notificationData);
-      });
+      const isUserInactive = getOffLineUsers([id]);
+
+      if (isUserInactive.length) {
+        // push notification to client
+        userSubscription.forEach(async ({ subscription }) => {
+          await pushNotification(subscription, notificationData);
+        });
+      }
     }
 
     return res.status(201).json({
@@ -510,10 +523,14 @@ const addDeposit = async (req, res) => {
       await updateNotificationBySingleUserId(userId, notificationData);
       dataSendToClient("user-notification", notificationData, [userId]);
 
-      // push notification to client
-      userSubscription.forEach(async ({ subscription }) => {
-        await pushNotification(subscription, notificationData);
-      });
+      const isUserInactive = getOffLineUsers([userId]);
+
+      if (isUserInactive.length) {
+        // push notification to client
+        userSubscription.forEach(async ({ subscription }) => {
+          await pushNotification(subscription, notificationData);
+        });
+      }
     }
 
     return res
@@ -613,11 +630,17 @@ const updatePaymentStatus = async (req, res) => {
         seen: false,
       };
 
-      userSubscription.forEach(async ({ subscription }) => {
-        await pushNotification(subscription, notificationData);
-      });
-
+      // store notification in DB
+      await updateNotificationBySingleUserId(userId, notificationData);
       dataSendToClient("user-notification", notificationData, [userId]);
+
+      const isUserInactive = getOffLineUsers([userId]);
+
+      if (isUserInactive.length) {
+        userSubscription.forEach(async ({ subscription }) => {
+          await pushNotification(subscription, notificationData);
+        });
+      }
     }
 
     return res.status(200).json({ status: "success" });

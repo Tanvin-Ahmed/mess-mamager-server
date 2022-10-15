@@ -10,6 +10,7 @@ const {
   deleteMessageFromDB,
   updateMessageTextInDB,
   updateSeenStatusInDB,
+  removeChatsBySenderId,
 } = require("./messages.service");
 const { v4: uuidv4 } = require("uuid");
 const { pushNotification } = require("../../pushNotification/pushNotification");
@@ -192,9 +193,28 @@ const updateSeenStatus = async (req, res) => {
       .status(200)
       .json({ message: "seen updated successfully!", status: "info" });
   } catch (error) {
-    console.log(error);
     return res.status(500).json({
       message: "Seen not updated, please try again!",
+      status: "error",
+    });
+  }
+};
+
+const deleteMyChats = async (req, res) => {
+  try {
+    const { senderId } = req.params;
+    const { membersId } = req.body;
+
+    await removeChatsBySenderId(senderId);
+
+    dataSendToClient("delete-specific-user-chats", { senderId }, membersId);
+
+    return res
+      .status(200)
+      .json({ message: "Successfully deleted my chats!", status: "success" });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Your chats not deleted!",
       status: "error",
     });
   }
@@ -210,4 +230,5 @@ module.exports = {
   deleteMessage,
   updateMessage,
   updateSeenStatus,
+  deleteMyChats,
 };

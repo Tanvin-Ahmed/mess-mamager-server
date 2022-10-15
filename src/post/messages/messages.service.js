@@ -133,6 +133,12 @@ const updateSeenStatusInDB = async (info) => {
   });
 };
 
+const removeChatsBySenderId = async (senderId) => {
+  const _senderId = mongoose.Types.ObjectId(senderId);
+
+  return await postMessage.deleteMany({ sender: _senderId });
+};
+
 module.exports = {
   createMessage,
   findChatCount,
@@ -143,4 +149,5 @@ module.exports = {
   deleteMessageFromDB,
   updateMessageTextInDB,
   updateSeenStatusInDB,
+  removeChatsBySenderId,
 };
