@@ -11,6 +11,7 @@ const {
   updateMessageTextInDB,
   updateSeenStatusInDB,
   removeChatsBySenderId,
+  removeConversationByMessId,
 } = require("./messages.service");
 const { v4: uuidv4 } = require("uuid");
 const { pushNotification } = require("../../pushNotification/pushNotification");
@@ -220,6 +221,26 @@ const deleteMyChats = async (req, res) => {
   }
 };
 
+const deleteConversation = async (req, res) => {
+  try {
+    const { messId } = req.params;
+    const { membersId } = req.body;
+
+    await removeConversationByMessId(messId);
+
+    dataSendToClient("delete-conversation", { messId }, membersId);
+
+    return res
+      .status(200)
+      .json({ message: "conversation deleted successfully!", status: "info" });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong! Please try again later!",
+      status: "error",
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessageCount,
@@ -231,4 +252,5 @@ module.exports = {
   updateMessage,
   updateSeenStatus,
   deleteMyChats,
+  deleteConversation,
 };

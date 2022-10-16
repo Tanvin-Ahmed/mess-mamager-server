@@ -139,6 +139,12 @@ const removeChatsBySenderId = async (senderId) => {
   return await postMessage.deleteMany({ sender: _senderId });
 };
 
+const removeConversationByMessId = async (messId) => {
+  const _messId = mongoose.Types.ObjectId(messId);
+
+  return await postMessage.deleteMany({ messId: _messId });
+};
+
 module.exports = {
   createMessage,
   findChatCount,
@@ -150,4 +156,5 @@ module.exports = {
   updateMessageTextInDB,
   updateSeenStatusInDB,
   removeChatsBySenderId,
+  removeConversationByMessId,
 };

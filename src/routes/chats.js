@@ -11,6 +11,7 @@ const {
   updateMessage,
   updateSeenStatus,
   deleteMyChats,
+  deleteConversation,
 } = require("../post/messages/messages.controller");
 
 const router = express.Router();
@@ -25,4 +26,10 @@ router.put("/delete-message/:messageId", tokenVerification, deleteMessage);
 router.put("/update-message", tokenVerification, updateMessage);
 router.put("/update-seen-status", tokenVerification, updateSeenStatus);
 router.put("/delete-my-messages/:senderId", tokenVerification, deleteMyChats);
+router.put(
+  "/delete-conversation/:messId",
+  tokenVerification,
+  deleteConversation
+);
+
 module.exports = router;
