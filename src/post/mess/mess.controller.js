@@ -6,6 +6,8 @@ const {
   removeMemberFromMess,
   AddOthersCost,
   addMarketCost,
+  getMembersCount,
+  getMessMembersInfo,
 } = require("./mess.service");
 
 const {
@@ -36,13 +38,31 @@ const getMessDetails = async (req, res) => {
   try {
     const id = req.params.id;
     const mess = await getMessInfoById(id);
+    const count = await getMembersCount(id);
 
-    return res.status(200).json(mess);
+    const membersCount = JSON.parse(JSON.stringify(count));
+
+    return res
+      .status(200)
+      .json({ messInfo: mess, membersCount: membersCount[0].total });
   } catch (error) {
-    console.log(error);
     return res
       .status(404)
       .json({ error: true, message: "Something went wrong" });
+  }
+};
+
+const getMeembersInfo = async (req, res) => {
+  try {
+    const { limit, skip, id } = req.query;
+    const info = await getMessMembersInfo(id, Number(skip), Number(limit));
+
+    return res.status(200).json(info);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong, please try again later!",
+      status: "error",
+    });
   }
 };
 
@@ -152,4 +172,5 @@ module.exports = {
   addMemberInMess,
   removeMember,
   addCost,
+  getMeembersInfo,
 };

@@ -50,6 +50,22 @@ const createMess = async ({ data, creatorId }) => {
   }
 };
 
+const getMembersCount = async (messId) => {
+  const id = mongoose.Types.ObjectId(messId);
+
+  return await postMess.aggregate([
+    {
+      $match: { _id: id },
+    },
+    {
+      $group: {
+        _id: id,
+        total: { $sum: { $size: "$members" } },
+      },
+    },
+  ]);
+};
+
 const getMessInfoById = async (id) => {
   const _id = mongoose.Types.ObjectId(id);
   return await postMess
@@ -58,9 +74,28 @@ const getMessInfoById = async (id) => {
       path: "members",
       model: config.user_info_collection,
       select: "email _id username managerOfTheMonths admin monthList",
+      options: {
+        limit: 10,
+      },
     })
-    .slice({ members: [0, 10] })
     .select("-createdAt -updatedAt")
+    .exec();
+};
+
+const getMessMembersInfo = async (id, skip, limit) => {
+  const _id = mongoose.Types.ObjectId(id);
+  return await postMess
+    .findById(_id)
+    .populate({
+      path: "members",
+      model: config.user_info_collection,
+      select: "email _id username managerOfTheMonths admin monthList",
+      options: {
+        limit: limit,
+        skip: skip,
+      },
+    })
+    .select("members")
     .exec();
 };
 
@@ -200,4 +235,6 @@ module.exports = {
   addMarketCost,
   removeMemberFromMessWhenAccountDelete,
   checkIfMonthListLengthGraterThanThree,
+  getMembersCount,
+  getMessMembersInfo,
 };
