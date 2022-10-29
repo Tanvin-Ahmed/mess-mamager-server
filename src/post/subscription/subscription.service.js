@@ -49,10 +49,16 @@ const deleteSubscription = async (subscriptionId) => {
   return await postSubscription.findByIdAndDelete(_id);
 };
 
+const deleteUserAllSubscriptions = async (userId) => {
+  const _userid = mongoose.Types.ObjectId(userId);
+  return await postSubscription.deleteMany({ userId: _userid });
+};
+
 module.exports = {
   createSubscription,
   subscriptionAlreadyExists,
   subscriptionsByUserIds,
   subscriptionsByUserId,
   deleteSubscription,
+  deleteUserAllSubscriptions,
 };

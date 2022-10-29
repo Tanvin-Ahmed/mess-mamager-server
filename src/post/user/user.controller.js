@@ -19,6 +19,7 @@ const {
 } = require("../mess/mess.service");
 const {
   subscriptionsByUserIds,
+  deleteUserAllSubscriptions,
 } = require("../subscription/subscription.service");
 const {
   registerUser,
@@ -568,6 +569,7 @@ const deleteUserAccount = async (req, res) => {
     }
 
     await deleteAccount(userId);
+    await deleteUserAllSubscriptions(userId);
 
     if (messId) {
       await removeMemberFromMessWhenAccountDelete(userId, messId);
