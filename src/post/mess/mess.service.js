@@ -10,7 +10,7 @@ const checkIfMonthListLengthGraterThanThree = async (id) => {
 
     const monthList = Object.keys(messInfo.monthList);
 
-    if (monthList.length > 3) {
+    if (monthList.length > 8) {
       return await postMess.findByIdAndUpdate(_id, {
         $unset: { ["monthList." + monthList[0]]: 1 },
       });
