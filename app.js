@@ -42,8 +42,9 @@ app.set("port", port);
 /**
  * Listen on provided port, on all network interfaces.
  */
+const hostname = "0.0.0.0";
 
-server.listen(port);
+server.listen(port, hostname);
 server.on("error", onError);
 server.on("listening", onListening);
 
